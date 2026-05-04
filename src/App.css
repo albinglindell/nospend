@@ -1,0 +1,32 @@
+.app {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+}
+
+.app__legend {
+  list-style: none;
+  margin: 0 auto 16px;
+  padding: 8px 16px;
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.app__legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.app__legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
