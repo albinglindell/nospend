@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Modal, InputNumber, Button, Space, List, Empty } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import dayjs, { Dayjs } from "dayjs";
-import { getDayTotal, SpendEntry } from "../utils/spendEntry";
+import { formatAmount, getDayTotal, SpendEntry } from "../utils/spendEntry";
 
 type SpendModalProps = {
   date: Dayjs | null;
@@ -74,7 +74,7 @@ const SpendModal = ({
                 ]}
               >
                 <span style={{ fontSize: 16, fontWeight: 600 }}>
-                  {entry.amount}
+                  {formatAmount(entry.amount)}
                 </span>
               </List.Item>
             )}
@@ -87,7 +87,7 @@ const SpendModal = ({
                 }}
               >
                 <span>Total</span>
-                <span>{total}</span>
+                <span>{formatAmount(total)}</span>
               </div>
             }
           />

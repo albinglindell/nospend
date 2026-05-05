@@ -13,6 +13,8 @@ export const getDayTotal = (entries: SpendEntry[] | undefined): number => {
   return entries.reduce((total, entry) => total + entry.amount, 0);
 };
 
+export const formatAmount = (amount: number): string => `${amount} kr`;
+
 export const migrateSpendMap = (raw: unknown): SpendMap => {
   if (!raw || typeof raw !== "object") return {};
   const result: SpendMap = {};

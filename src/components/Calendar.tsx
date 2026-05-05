@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import dayjs, { Dayjs } from "dayjs";
 import { getSpendLevel, SPEND_COLORS } from "../utils/spendColor";
-import { getDayTotal, SpendMap } from "../utils/spendEntry";
+import { formatAmount, getDayTotal, SpendMap } from "../utils/spendEntry";
 import "./Calendar.css";
 
 type CalendarProps = {
@@ -55,8 +55,11 @@ const Calendar = ({
         </button>
         <div className="calendar__title-group">
           <h2 className="calendar__title">{month.format("MMMM YYYY")}</h2>
-          <p className="calendar__total" aria-label={`Total spent ${monthTotal}`}>
-            Total: {monthTotal}
+          <p
+            className="calendar__total"
+            aria-label={`Total spent ${formatAmount(monthTotal)}`}
+          >
+            Total: {formatAmount(monthTotal)}
           </p>
         </div>
         <button
@@ -93,7 +96,7 @@ const Calendar = ({
               type="button"
               tabIndex={0}
               aria-label={`${day.format("MMMM D, YYYY")}${
-                dayTotal !== undefined ? `, spent ${dayTotal}` : ""
+                dayTotal !== undefined ? `, spent ${formatAmount(dayTotal)}` : ""
               }`}
               className={[
                 "calendar__cell",
@@ -111,7 +114,7 @@ const Calendar = ({
             >
               <span className="calendar__date-number">{day.date()}</span>
               {dayTotal !== undefined && (
-                <span className="calendar__amount">{dayTotal}</span>
+                <span className="calendar__amount">{formatAmount(dayTotal)}</span>
               )}
             </button>
           );
