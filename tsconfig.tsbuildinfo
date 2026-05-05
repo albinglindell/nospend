@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/components/calendar.tsx","./src/components/spendmodal.tsx","./src/hooks/uselocalstorage.ts","./src/utils/spendcolor.ts","./src/utils/spendentry.ts"],"version":"5.9.3"}

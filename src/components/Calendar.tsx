@@ -1,9 +1,8 @@
 import { useMemo } from "react";
 import dayjs, { Dayjs } from "dayjs";
 import { getSpendLevel, SPEND_COLORS } from "../utils/spendColor";
+import { getDayTotal, SpendMap } from "../utils/spendEntry";
 import "./Calendar.css";
-
-type SpendMap = Record<string, number>;
 
 type CalendarProps = {
   month: Dayjs;
@@ -35,9 +34,9 @@ const Calendar = ({
 
   const monthTotal = useMemo(() => {
     const monthKeyPrefix = month.format("YYYY-MM");
-    return Object.entries(spends).reduce((total, [key, amount]) => {
+    return Object.entries(spends).reduce((total, [key, entries]) => {
       if (!key.startsWith(monthKeyPrefix)) return total;
-      return total + amount;
+      return total + getDayTotal(entries);
     }, 0);
   }, [month, spends]);
 
@@ -81,8 +80,10 @@ const Calendar = ({
       <div className="calendar__grid">
         {days.map((day) => {
           const key = day.format("YYYY-MM-DD");
-          const amount = spends[key];
-          const level = getSpendLevel(amount);
+          const entries = spends[key];
+          const hasEntries = entries !== undefined && entries.length > 0;
+          const dayTotal = hasEntries ? getDayTotal(entries) : undefined;
+          const level = getSpendLevel(dayTotal);
           const isCurrentMonth = day.month() === month.month();
           const isToday = day.isSame(today, "day");
 
@@ -92,7 +93,7 @@ const Calendar = ({
               type="button"
               tabIndex={0}
               aria-label={`${day.format("MMMM D, YYYY")}${
-                amount !== undefined ? `, spent ${amount}` : ""
+                dayTotal !== undefined ? `, spent ${dayTotal}` : ""
               }`}
               className={[
                 "calendar__cell",
@@ -109,8 +110,8 @@ const Calendar = ({
               onClick={() => onSelectDateHandler(day)}
             >
               <span className="calendar__date-number">{day.date()}</span>
-              {amount !== undefined && (
-                <span className="calendar__amount">{amount}</span>
+              {dayTotal !== undefined && (
+                <span className="calendar__amount">{dayTotal}</span>
               )}
             </button>
           );

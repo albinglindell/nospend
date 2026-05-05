@@ -1,39 +1,44 @@
 import { useEffect, useState } from "react";
-import { Modal, InputNumber, Button, Space } from "antd";
+import { Modal, InputNumber, Button, Space, List, Empty } from "antd";
+import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import dayjs, { Dayjs } from "dayjs";
+import { getDayTotal, SpendEntry } from "../utils/spendEntry";
 
 type SpendModalProps = {
   date: Dayjs | null;
-  initialAmount: number | undefined;
-  onSaveHandler: (date: Dayjs, amount: number) => void;
-  onDeleteHandler: (date: Dayjs) => void;
+  entries: SpendEntry[];
+  onAddEntryHandler: (date: Dayjs, amount: number) => void;
+  onRemoveEntryHandler: (date: Dayjs, entryId: string) => void;
   onCloseHandler: () => void;
 };
 
 const SpendModal = ({
   date,
-  initialAmount,
-  onSaveHandler,
-  onDeleteHandler,
+  entries,
+  onAddEntryHandler,
+  onRemoveEntryHandler,
   onCloseHandler,
 }: SpendModalProps) => {
   const [amount, setAmount] = useState<number | null>(null);
 
   useEffect(() => {
     if (date) {
-      setAmount(() => initialAmount ?? 0);
+      setAmount(() => null);
     }
-  }, [date, initialAmount]);
+  }, [date]);
 
-  const onSaveClickHandler = () => {
-    if (!date || amount === null) return;
-    onSaveHandler(date, amount);
+  const onAddClickHandler = () => {
+    if (!date || amount === null || Number.isNaN(amount)) return;
+    onAddEntryHandler(date, amount);
+    setAmount(() => null);
   };
 
-  const onDeleteClickHandler = () => {
+  const onRemoveClickHandler = (entryId: string) => {
     if (!date) return;
-    onDeleteHandler(date);
+    onRemoveEntryHandler(date, entryId);
   };
+
+  const total = getDayTotal(entries);
 
   return (
     <Modal
@@ -45,34 +50,77 @@ const SpendModal = ({
       destroyOnClose
       width={360}
     >
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
-        <InputNumber
-          autoFocus
-          value={amount ?? undefined}
-          onChange={(value) => setAmount(() => (typeof value === "number" ? value : 0))}
-          min={0}
-          step={10}
-          size="large"
-          placeholder="Amount spent"
-          style={{ width: "100%" }}
-          inputMode="decimal"
-        />
+      <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+        {entries.length === 0 ? (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="No costs yet"
+          />
+        ) : (
+          <List
+            size="small"
+            dataSource={entries}
+            renderItem={(entry) => (
+              <List.Item
+                actions={[
+                  <Button
+                    key="remove"
+                    type="text"
+                    danger
+                    aria-label="Remove cost"
+                    icon={<DeleteOutlined />}
+                    onClick={() => onRemoveClickHandler(entry.id)}
+                  />,
+                ]}
+              >
+                <span style={{ fontSize: 16, fontWeight: 600 }}>
+                  {entry.amount}
+                </span>
+              </List.Item>
+            )}
+            footer={
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontWeight: 600,
+                }}
+              >
+                <span>Total</span>
+                <span>{total}</span>
+              </div>
+            }
+          />
+        )}
 
-        <Space style={{ width: "100%", justifyContent: "space-between" }}>
+        <Space.Compact style={{ width: "100%" }}>
+          <InputNumber
+            value={amount ?? undefined}
+            onChange={(value) =>
+              setAmount(() => (typeof value === "number" ? value : null))
+            }
+            onPressEnter={onAddClickHandler}
+            min={0}
+            step={10}
+            size="large"
+            placeholder="Amount"
+            style={{ width: "100%" }}
+            inputMode="decimal"
+          />
           <Button
-            danger
-            onClick={onDeleteClickHandler}
-            disabled={initialAmount === undefined}
+            type="primary"
+            size="large"
+            icon={<PlusOutlined />}
+            onClick={onAddClickHandler}
+            disabled={amount === null}
           >
-            Clear
+            Add cost
           </Button>
-          <Space>
-            <Button onClick={onCloseHandler}>Cancel</Button>
-            <Button type="primary" onClick={onSaveClickHandler}>
-              Save
-            </Button>
-          </Space>
-        </Space>
+        </Space.Compact>
+
+        <Button block onClick={onCloseHandler}>
+          Close
+        </Button>
       </Space>
     </Modal>
   );

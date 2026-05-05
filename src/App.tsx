@@ -1,22 +1,51 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import dayjs, { Dayjs } from "dayjs";
 import { ConfigProvider, theme } from "antd";
 import Calendar from "./components/Calendar";
 import SpendModal from "./components/SpendModal";
-import { useLocalStorage } from "./hooks/useLocalStorage";
 import { SPEND_COLORS, YELLOW_THRESHOLD } from "./utils/spendColor";
+import {
+  createEntryId,
+  migrateSpendMap,
+  SpendEntry,
+  SpendMap,
+} from "./utils/spendEntry";
 import "./App.css";
 
-type SpendMap = Record<string, number>;
-
-const STORAGE_KEY = "nospend.spends.v1";
+const STORAGE_KEY = "nospend.spends.v2";
+const LEGACY_STORAGE_KEY = "nospend.spends.v1";
 
 const formatKey = (date: Dayjs) => date.format("YYYY-MM-DD");
 
+const loadInitialSpends = (): SpendMap => {
+  if (typeof window === "undefined") return {};
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (stored) return migrateSpendMap(JSON.parse(stored));
+    const legacy = window.localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (legacy) {
+      const migrated = migrateSpendMap(JSON.parse(legacy));
+      window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+      return migrated;
+    }
+  } catch {
+    /* noop */
+  }
+  return {};
+};
+
 const App = () => {
-  const [spends, setSpends] = useLocalStorage<SpendMap>(STORAGE_KEY, {});
+  const [spends, setSpends] = useState<SpendMap>(() => loadInitialSpends());
   const [month, setMonth] = useState<Dayjs>(() => dayjs().startOf("month"));
   const [selectedDate, setSelectedDate] = useState<Dayjs | null>(null);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(spends));
+    } catch {
+      /* noop */
+    }
+  }, [spends]);
 
   const onPrevMonthHandler = () => {
     setMonth((current) => current.subtract(1, "month"));
@@ -34,23 +63,32 @@ const App = () => {
     setSelectedDate(() => null);
   };
 
-  const onSaveHandler = (date: Dayjs, amount: number) => {
+  const onAddEntryHandler = (date: Dayjs, amount: number) => {
     const key = formatKey(date);
-    setSpends((current) => ({ ...current, [key]: amount }));
-    setSelectedDate(() => null);
+    const newEntry: SpendEntry = { id: createEntryId(), amount };
+    setSpends((current) => ({
+      ...current,
+      [key]: [...(current[key] ?? []), newEntry],
+    }));
   };
 
-  const onDeleteHandler = (date: Dayjs) => {
+  const onRemoveEntryHandler = (date: Dayjs, entryId: string) => {
     const key = formatKey(date);
     setSpends((current) => {
+      const existing = current[key];
+      if (!existing) return current;
+      const remaining = existing.filter((entry) => entry.id !== entryId);
       const next = { ...current };
-      delete next[key];
+      if (remaining.length === 0) {
+        delete next[key];
+      } else {
+        next[key] = remaining;
+      }
       return next;
     });
-    setSelectedDate(() => null);
   };
 
-  const initialAmount = selectedDate ? spends[formatKey(selectedDate)] : undefined;
+  const selectedEntries = selectedDate ? spends[formatKey(selectedDate)] ?? [] : [];
 
   return (
     <ConfigProvider
@@ -97,9 +135,9 @@ const App = () => {
 
         <SpendModal
           date={selectedDate}
-          initialAmount={initialAmount}
-          onSaveHandler={onSaveHandler}
-          onDeleteHandler={onDeleteHandler}
+          entries={selectedEntries}
+          onAddEntryHandler={onAddEntryHandler}
+          onRemoveEntryHandler={onRemoveEntryHandler}
           onCloseHandler={onCloseModalHandler}
         />
       </div>
