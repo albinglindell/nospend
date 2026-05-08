@@ -3,6 +3,7 @@ import dayjs, { Dayjs } from "dayjs";
 import { ConfigProvider, theme } from "antd";
 import Calendar from "./components/Calendar";
 import SpendModal from "./components/SpendModal";
+import GoalModal from "./components/GoalModal";
 import { SPEND_COLORS, YELLOW_THRESHOLD } from "./utils/spendColor";
 import {
   createEntryId,
@@ -14,8 +15,12 @@ import "./App.css";
 
 const STORAGE_KEY = "nospend.spends.v2";
 const LEGACY_STORAGE_KEY = "nospend.spends.v1";
+const GOALS_STORAGE_KEY = "nospend.goals.v1";
+
+type GoalMap = Record<string, number>;
 
 const formatKey = (date: Dayjs) => date.format("YYYY-MM-DD");
+const formatMonthKey = (date: Dayjs) => date.format("YYYY-MM");
 
 const loadInitialSpends = (): SpendMap => {
   if (typeof window === "undefined") return {};
@@ -34,10 +39,29 @@ const loadInitialSpends = (): SpendMap => {
   return {};
 };
 
+const loadInitialGoals = (): GoalMap => {
+  if (typeof window === "undefined") return {};
+  try {
+    const stored = window.localStorage.getItem(GOALS_STORAGE_KEY);
+    if (!stored) return {};
+    const parsed = JSON.parse(stored);
+    if (!parsed || typeof parsed !== "object") return {};
+    const result: GoalMap = {};
+    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof value === "number" && value > 0) result[key] = value;
+    }
+    return result;
+  } catch {
+    return {};
+  }
+};
+
 const App = () => {
   const [spends, setSpends] = useState<SpendMap>(() => loadInitialSpends());
+  const [goals, setGoals] = useState<GoalMap>(() => loadInitialGoals());
   const [month, setMonth] = useState<Dayjs>(() => dayjs().startOf("month"));
   const [selectedDate, setSelectedDate] = useState<Dayjs | null>(null);
+  const [editingGoalMonth, setEditingGoalMonth] = useState<Dayjs | null>(null);
 
   useEffect(() => {
     try {
@@ -46,6 +70,14 @@ const App = () => {
       /* noop */
     }
   }, [spends]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(GOALS_STORAGE_KEY, JSON.stringify(goals));
+    } catch {
+      /* noop */
+    }
+  }, [goals]);
 
   const onPrevMonthHandler = () => {
     setMonth((current) => current.subtract(1, "month"));
@@ -88,7 +120,36 @@ const App = () => {
     });
   };
 
+  const onEditGoalHandler = () => {
+    setEditingGoalMonth(() => month);
+  };
+
+  const onCloseGoalModalHandler = () => {
+    setEditingGoalMonth(() => null);
+  };
+
+  const onSaveGoalHandler = (goal: number) => {
+    if (!editingGoalMonth) return;
+    const key = formatMonthKey(editingGoalMonth);
+    setGoals((current) => ({ ...current, [key]: goal }));
+    setEditingGoalMonth(() => null);
+  };
+
+  const onRemoveGoalHandler = () => {
+    if (!editingGoalMonth) return;
+    const key = formatMonthKey(editingGoalMonth);
+    setGoals((current) => {
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+    setEditingGoalMonth(() => null);
+  };
+
   const selectedEntries = selectedDate ? spends[formatKey(selectedDate)] ?? [] : [];
+  const currentGoal = goals[formatMonthKey(month)];
+  const editingGoalKey = editingGoalMonth ? formatMonthKey(editingGoalMonth) : null;
+  const editingInitialGoal = editingGoalKey ? goals[editingGoalKey] : undefined;
 
   return (
     <ConfigProvider
@@ -104,9 +165,11 @@ const App = () => {
         <Calendar
           month={month}
           spends={spends}
+          goal={currentGoal}
           onPrevMonthHandler={onPrevMonthHandler}
           onNextMonthHandler={onNextMonthHandler}
           onSelectDateHandler={onSelectDateHandler}
+          onEditGoalHandler={onEditGoalHandler}
         />
 
         <ul className="app__legend" aria-label="Color legend">
@@ -115,21 +178,21 @@ const App = () => {
               className="app__legend-dot"
               style={{ background: SPEND_COLORS.zero }}
             />
-            0
+            0 kr
           </li>
           <li>
             <span
               className="app__legend-dot"
               style={{ background: SPEND_COLORS.low }}
             />
-            ≤ {YELLOW_THRESHOLD}
+            &lt; {YELLOW_THRESHOLD} kr
           </li>
           <li>
             <span
               className="app__legend-dot"
               style={{ background: SPEND_COLORS.high }}
             />
-            &gt; {YELLOW_THRESHOLD}
+            &gt; {YELLOW_THRESHOLD} kr
           </li>
         </ul>
 
@@ -139,6 +202,17 @@ const App = () => {
           onAddEntryHandler={onAddEntryHandler}
           onRemoveEntryHandler={onRemoveEntryHandler}
           onCloseHandler={onCloseModalHandler}
+        />
+
+        <GoalModal
+          monthLabel={
+            editingGoalMonth ? editingGoalMonth.format("MMMM YYYY") : null
+          }
+          initialGoal={editingInitialGoal}
+          maxDays={editingGoalMonth ? editingGoalMonth.daysInMonth() : 31}
+          onSaveHandler={onSaveGoalHandler}
+          onRemoveHandler={onRemoveGoalHandler}
+          onCloseHandler={onCloseGoalModalHandler}
         />
       </div>
     </ConfigProvider>

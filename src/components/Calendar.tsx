@@ -7,9 +7,11 @@ import "./Calendar.css";
 type CalendarProps = {
   month: Dayjs;
   spends: SpendMap;
+  goal: number | undefined;
   onPrevMonthHandler: () => void;
   onNextMonthHandler: () => void;
   onSelectDateHandler: (date: Dayjs) => void;
+  onEditGoalHandler: () => void;
 };
 
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -17,9 +19,11 @@ const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const Calendar = ({
   month,
   spends,
+  goal,
   onPrevMonthHandler,
   onNextMonthHandler,
   onSelectDateHandler,
+  onEditGoalHandler,
 }: CalendarProps) => {
   const days = useMemo(() => {
     const startOfMonth = month.startOf("month");
@@ -32,13 +36,24 @@ const Calendar = ({
     );
   }, [month]);
 
-  const monthTotal = useMemo(() => {
+  const { monthTotal, noSpendDays } = useMemo(() => {
     const monthKeyPrefix = month.format("YYYY-MM");
-    return Object.entries(spends).reduce((total, [key, entries]) => {
-      if (!key.startsWith(monthKeyPrefix)) return total;
-      return total + getDayTotal(entries);
-    }, 0);
+    let total = 0;
+    let zeroDays = 0;
+    for (const [key, entries] of Object.entries(spends)) {
+      if (!key.startsWith(monthKeyPrefix)) continue;
+      if (!entries || entries.length === 0) continue;
+      const dayTotal = getDayTotal(entries);
+      total += dayTotal;
+      if (dayTotal === 0) zeroDays += 1;
+    }
+    return { monthTotal: total, noSpendDays: zeroDays };
   }, [month, spends]);
+
+  const goalProgress =
+    goal !== undefined && goal > 0
+      ? Math.min(100, Math.round((noSpendDays / goal) * 100))
+      : 0;
 
   const today = dayjs();
 
@@ -71,6 +86,39 @@ const Calendar = ({
           ›
         </button>
       </div>
+
+      <button
+        type="button"
+        className="calendar__goal"
+        onClick={onEditGoalHandler}
+        aria-label={
+          goal === undefined
+            ? "Set no-spend goal"
+            : `Edit no-spend goal: ${noSpendDays} of ${goal} days`
+        }
+      >
+        {goal === undefined ? (
+          <span className="calendar__goal-empty">+ Set no-spend goal</span>
+        ) : (
+          <>
+            <span className="calendar__goal-label">
+              No-spend {noSpendDays} / {goal} days
+            </span>
+            <span
+              className="calendar__goal-bar"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={goal}
+              aria-valuenow={noSpendDays}
+            >
+              <span
+                className="calendar__goal-bar-fill"
+                style={{ width: `${goalProgress}%` }}
+              />
+            </span>
+          </>
+        )}
+      </button>
 
       <div className="calendar__weekdays">
         {WEEKDAY_LABELS.map((label) => (
