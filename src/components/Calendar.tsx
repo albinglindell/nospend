@@ -68,15 +68,7 @@ const Calendar = ({
         >
           ‹
         </button>
-        <div className="calendar__title-group">
-          <h2 className="calendar__title">{month.format("MMMM YYYY")}</h2>
-          <p
-            className="calendar__total"
-            aria-label={`Total spent ${formatAmount(monthTotal)}`}
-          >
-            Total: {formatAmount(monthTotal)}
-          </p>
-        </div>
+        <h2 className="calendar__title">{month.format("MMMM YYYY")}</h2>
         <button
           type="button"
           className="calendar__nav"
@@ -168,6 +160,13 @@ const Calendar = ({
           );
         })}
       </div>
+
+      <p
+        className="calendar__total"
+        aria-label={`Total spent ${formatAmount(monthTotal)}`}
+      >
+        Total: {formatAmount(monthTotal)}
+      </p>
     </div>
   );
 };
