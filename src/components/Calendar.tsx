@@ -1,7 +1,13 @@
 import { useMemo } from "react";
 import dayjs, { Dayjs } from "dayjs";
 import { getSpendLevel, SPEND_COLORS } from "../utils/spendColor";
-import { formatAmount, getDayTotal, SpendMap } from "../utils/spendEntry";
+import {
+  formatAmount,
+  getDayTotal,
+  getLowestPastMonth,
+  getMonthTotal,
+  SpendMap,
+} from "../utils/spendEntry";
 import "./Calendar.css";
 
 type CalendarProps = {
@@ -36,26 +42,32 @@ const Calendar = ({
     );
   }, [month]);
 
+  const today = dayjs();
+  const currentMonthKey = today.format("YYYY-MM");
+
   const { monthTotal, noSpendDays } = useMemo(() => {
     const monthKeyPrefix = month.format("YYYY-MM");
-    let total = 0;
     let zeroDays = 0;
     for (const [key, entries] of Object.entries(spends)) {
       if (!key.startsWith(monthKeyPrefix)) continue;
       if (!entries || entries.length === 0) continue;
-      const dayTotal = getDayTotal(entries);
-      total += dayTotal;
-      if (dayTotal === 0) zeroDays += 1;
+      if (getDayTotal(entries) === 0) zeroDays += 1;
     }
-    return { monthTotal: total, noSpendDays: zeroDays };
+    return {
+      monthTotal: getMonthTotal(spends, monthKeyPrefix),
+      noSpendDays: zeroDays,
+    };
   }, [month, spends]);
+
+  const lowestPastMonth = useMemo(
+    () => getLowestPastMonth(spends, currentMonthKey),
+    [spends, currentMonthKey]
+  );
 
   const goalProgress =
     goal !== undefined && goal > 0
       ? Math.min(100, Math.round((noSpendDays / goal) * 100))
       : 0;
-
-  const today = dayjs();
 
   return (
     <div className="calendar">
@@ -161,12 +173,26 @@ const Calendar = ({
         })}
       </div>
 
-      <p
-        className="calendar__total"
-        aria-label={`Total spent ${formatAmount(monthTotal)}`}
-      >
-        Total: {formatAmount(monthTotal)}
-      </p>
+      <div className="calendar__totals">
+        <p
+          className="calendar__total"
+          aria-label={`Total spent ${formatAmount(monthTotal)}`}
+        >
+          Total: {formatAmount(monthTotal)}
+        </p>
+        {lowestPastMonth && (
+          <p
+            className="calendar__record"
+            aria-label={`Lowest month ${formatAmount(lowestPastMonth.total)} in ${dayjs(`${lowestPastMonth.monthKey}-01`).format("MMMM YYYY")}`}
+          >
+            Lowest month: {formatAmount(lowestPastMonth.total)}
+            <span className="calendar__record-month">
+              {" "}
+              ({dayjs(`${lowestPastMonth.monthKey}-01`).format("MMM YYYY")})
+            </span>
+          </p>
+        )}
+      </div>
     </div>
   );
 };
